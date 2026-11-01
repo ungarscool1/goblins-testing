@@ -7,8 +7,8 @@ import (
 
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", helloHandler)
 	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/", helloHandler)
 	return mux
 }
 
