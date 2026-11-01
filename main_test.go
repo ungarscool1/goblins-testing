@@ -26,12 +26,13 @@ func TestRoutes(t *testing.T) {
 			wantHeaders: map[string]string{"Content-Type": "application/json"},
 		},
 		{
-			name:       "GET /",
-			method:     http.MethodGet,
-			path:       "/",
-			wantStatus: http.StatusOK,
-			wantBody:   "hello world",
-			checkBody:  true,
+			name:        "GET /",
+			method:      http.MethodGet,
+			path:        "/",
+			wantStatus:  http.StatusOK,
+			wantBody:    "hello world",
+			checkBody:   true,
+			wantHeaders: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
 		},
 		{
 			name:        "POST /health",
@@ -95,6 +96,40 @@ func TestRoutes(t *testing.T) {
 				if got := rec.Header().Get(k); got != want {
 					t.Errorf("header %s = %q, want %q", k, got, want)
 				}
+			}
+		})
+	}
+}
+
+func TestRequireGet(t *testing.T) {
+	t.Run("GET passes through", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+
+		if !requireGet(rec, req) {
+			t.Fatal("requireGet(GET) = false, want true")
+		}
+		if rec.Body.Len() != 0 {
+			t.Errorf("body = %q, want empty", rec.Body.String())
+		}
+		if got := rec.Header().Get("Allow"); got != "" {
+			t.Errorf("Allow header = %q, want unset", got)
+		}
+	})
+
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodHead} {
+		t.Run(method+" is rejected", func(t *testing.T) {
+			req := httptest.NewRequest(method, "/", nil)
+			rec := httptest.NewRecorder()
+
+			if requireGet(rec, req) {
+				t.Fatalf("requireGet(%s) = true, want false", method)
+			}
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+			}
+			if got := rec.Header().Get("Allow"); got != "GET" {
+				t.Errorf("Allow header = %q, want %q", got, "GET")
 			}
 		})
 	}
