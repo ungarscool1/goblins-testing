@@ -75,6 +75,14 @@ func TestRoutes(t *testing.T) {
 			path:       "/unknown",
 			wantStatus: http.StatusNotFound,
 		},
+		{
+			// An unknown path must give 404 before the method check runs.
+			name:        "POST /unknown",
+			method:      http.MethodPost,
+			path:        "/unknown",
+			wantStatus:  http.StatusNotFound,
+			wantHeaders: map[string]string{"Allow": ""},
+		},
 	}
 
 	mux := newMux()
