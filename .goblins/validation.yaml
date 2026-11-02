@@ -1,0 +1,17 @@
+version: 1
+image: golang:1.27-alpine
+checks:
+  - name: vet
+    stage: lint
+    run: go vet ./...
+  - name: test
+    stage: test
+    run: go test ./...
+  - name: conformance
+    stage: conformance
+    run: sh conformance/check.sh > conformance.txt 2>&1
+    artifacts: [conformance.txt]
+  - name: nice-to-have
+    stage: lint
+    run: test -f CHANGELOG.md
+    optional: true
