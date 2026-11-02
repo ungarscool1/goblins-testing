@@ -32,6 +32,17 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+// Version responds to GET with the JSON body {"version":"1"}. Other methods
+// return 405.
+func Version(w http.ResponseWriter, r *http.Request) {
+	if !allowGet(w, r) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"version":"1"}`))
+}
+
 // allowGet reports whether r is a GET request. If it is not, it writes a
 // 405 Method Not Allowed response with an "Allow: GET" header and returns false.
 func allowGet(w http.ResponseWriter, r *http.Request) bool {

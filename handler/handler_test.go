@@ -83,6 +83,48 @@ func TestHealth(t *testing.T) {
 	})
 }
 
+func TestVersion(t *testing.T) {
+	runCases(t, Version, []handlerCase{
+		{
+			name:        "GET",
+			method:      http.MethodGet,
+			path:        "/version",
+			wantStatus:  http.StatusOK,
+			wantBody:    `{"version":"1"}`,
+			checkBody:   true,
+			wantHeaders: map[string]string{"Content-Type": "application/json"},
+		},
+		{
+			name:        "POST",
+			method:      http.MethodPost,
+			path:        "/version",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: map[string]string{"Allow": "GET"},
+		},
+		{
+			name:        "PUT",
+			method:      http.MethodPut,
+			path:        "/version",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: map[string]string{"Allow": "GET"},
+		},
+		{
+			name:        "DELETE",
+			method:      http.MethodDelete,
+			path:        "/version",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: map[string]string{"Allow": "GET"},
+		},
+		{
+			name:        "HEAD",
+			method:      http.MethodHead,
+			path:        "/version",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: map[string]string{"Allow": "GET"},
+		},
+	})
+}
+
 func TestHello(t *testing.T) {
 	runCases(t, Hello, []handlerCase{
 		{
