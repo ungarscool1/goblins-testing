@@ -17,6 +17,8 @@ func TestRoutes(t *testing.T) {
 	}{
 		{name: "GET /", path: "/", wantStatus: http.StatusOK, wantBody: "hello world"},
 		{name: "GET /health", path: "/health", wantStatus: http.StatusOK, wantBody: `{"status":"ok"}`},
+		{name: "GET /version", path: "/version", wantStatus: http.StatusOK, wantBody: `{"version":"1"}`},
+		{name: "GET /version/extra", path: "/version/extra", wantStatus: http.StatusNotFound},
 		{name: "GET /nope", path: "/nope", wantStatus: http.StatusNotFound},
 	}
 
