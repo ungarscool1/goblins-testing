@@ -6,6 +6,10 @@ import "net/http"
 // Hello responds to GET / with "hello world". Other paths return 404 and
 // other methods return 405.
 func Hello(w http.ResponseWriter, r *http.Request) {
+	// Hello is registered on the catch-all "/" pattern, so it receives every
+	// unmatched path. Check the path first: an unknown path is 404 whatever
+	// the method, and answering 405 with Allow: GET would wrongly suggest the
+	// resource exists.
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
