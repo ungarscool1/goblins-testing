@@ -125,6 +125,107 @@ func TestHello(t *testing.T) {
 	})
 }
 
+func TestEcho(t *testing.T) {
+	plainText := map[string]string{
+		"Content-Type":           "text/plain; charset=utf-8",
+		"X-Content-Type-Options": "nosniff",
+	}
+	allowGetOnly := map[string]string{"Allow": "GET"}
+
+	runCases(t, Echo, []handlerCase{
+		{
+			name:        "GET msg=hello",
+			method:      http.MethodGet,
+			path:        "/echo?msg=hello",
+			wantStatus:  http.StatusOK,
+			wantBody:    "hello",
+			checkBody:   true,
+			wantHeaders: plainText,
+		},
+		{
+			name:        "GET msg is URL-decoded",
+			method:      http.MethodGet,
+			path:        "/echo?msg=hello%20world",
+			wantStatus:  http.StatusOK,
+			wantBody:    "hello world",
+			checkBody:   true,
+			wantHeaders: plainText,
+		},
+		{
+			name:       "GET repeated msg uses the first value",
+			method:     http.MethodGet,
+			path:       "/echo?msg=a&msg=b",
+			wantStatus: http.StatusOK,
+			wantBody:   "a",
+			checkBody:  true,
+		},
+		{
+			// Reflected input must stay plain text so browsers do not render it.
+			name:        "GET msg=<script> stays plain text",
+			method:      http.MethodGet,
+			path:        "/echo?msg=%3Cscript%3E",
+			wantStatus:  http.StatusOK,
+			wantBody:    "<script>",
+			checkBody:   true,
+			wantHeaders: plainText,
+		},
+		{
+			name:       "GET without msg",
+			method:     http.MethodGet,
+			path:       "/echo",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "GET with empty msg",
+			method:     http.MethodGet,
+			path:       "/echo?msg=",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "GET with other parameter only",
+			method:     http.MethodGet,
+			path:       "/echo?other=x",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:        "POST",
+			method:      http.MethodPost,
+			path:        "/echo?msg=hello",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: allowGetOnly,
+		},
+		{
+			name:        "PUT",
+			method:      http.MethodPut,
+			path:        "/echo?msg=hello",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: allowGetOnly,
+		},
+		{
+			name:        "DELETE",
+			method:      http.MethodDelete,
+			path:        "/echo?msg=hello",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: allowGetOnly,
+		},
+		{
+			name:        "HEAD",
+			method:      http.MethodHead,
+			path:        "/echo?msg=hello",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: allowGetOnly,
+		},
+		{
+			// The method check runs before the msg check.
+			name:        "POST without msg",
+			method:      http.MethodPost,
+			path:        "/echo",
+			wantStatus:  http.StatusMethodNotAllowed,
+			wantHeaders: allowGetOnly,
+		},
+	})
+}
+
 func TestAllowGet(t *testing.T) {
 	t.Run("GET passes through", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

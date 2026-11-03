@@ -32,6 +32,25 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+// Echo responds to GET /echo?msg=<value> with the plain-text body <value>,
+// exactly as decoded from the query string. A missing or empty msg returns
+// 400 and other methods return 405. The response is always text/plain with
+// X-Content-Type-Options: nosniff so the reflected input is never rendered
+// as HTML.
+func Echo(w http.ResponseWriter, r *http.Request) {
+	if !allowGet(w, r) {
+		return
+	}
+	msg := r.URL.Query().Get("msg")
+	if msg == "" {
+		http.Error(w, "missing msg query parameter", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Write([]byte(msg))
+}
+
 // allowGet reports whether r is a GET request. If it is not, it writes a
 // 405 Method Not Allowed response with an "Allow: GET" header and returns false.
 func allowGet(w http.ResponseWriter, r *http.Request) bool {

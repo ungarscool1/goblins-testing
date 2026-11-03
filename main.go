@@ -7,10 +7,11 @@ import (
 	"goblins-testing/handler"
 )
 
-// newMux routes /health to handler.Health and all other paths to handler.Hello, which serves / and returns 404 for the rest.
+// newMux routes /health to handler.Health, /echo to handler.Echo and all other paths to handler.Hello, which serves / and returns 404 for the rest.
 func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler.Health)
+	mux.HandleFunc("/echo", handler.Echo)
 	mux.HandleFunc("/", handler.Hello)
 	return mux
 }
