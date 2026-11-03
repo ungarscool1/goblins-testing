@@ -1,7 +1,24 @@
 // Package handler contains the HTTP handlers for the service.
 package handler
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+)
+
+// now is the clock used by Time. Tests replace it to get a fixed time.
+var now = time.Now
+
+// timeLayout is RFC 3339 with exactly 9 fractional digits. Unlike
+// time.RFC3339Nano it keeps trailing zeros, so the string has a fixed width.
+const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
+
+// timeResponse is the JSON body of Time.
+type timeResponse struct {
+	UTC      string `json:"utc"`
+	UnixNano int64  `json:"unix_nano"`
+}
 
 // Hello responds to GET / with "hello world". Other paths return 404 and
 // other methods return 405.
@@ -30,6 +47,33 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// Time responds to GET with the server's current UTC time as JSON, for
+// checking clock drift between hosts. The body has two fields that describe
+// the same instant: "utc", an RFC 3339 string with exactly 9 fractional digits
+// (e.g. "2026-11-03T12:34:56.000000100Z"), and "unix_nano", an integer count
+// of nanoseconds since the Unix epoch. Other methods return 405.
+func Time(w http.ResponseWriter, r *http.Request) {
+	if !allowGet(w, r) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+
+	// Read the clock once, as late as possible, and derive both fields from
+	// that single reading so they always agree.
+	t := now().UTC()
+	body, err := json.Marshal(timeResponse{
+		UTC:      t.Format(timeLayout),
+		UnixNano: t.UnixNano(),
+	})
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
 }
 
 // allowGet reports whether r is a GET request. If it is not, it writes a
