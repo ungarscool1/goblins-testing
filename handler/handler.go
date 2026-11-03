@@ -48,7 +48,9 @@ func Echo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Write([]byte(msg))
+	// A write error cannot be reported: the status and headers are already
+	// sent, so the error is discarded on purpose.
+	_, _ = w.Write([]byte(msg))
 }
 
 // allowGet reports whether r is a GET request. If it is not, it writes a
