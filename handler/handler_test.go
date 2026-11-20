@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 type handlerCase struct {
@@ -123,6 +124,138 @@ func TestHello(t *testing.T) {
 			wantHeaders: map[string]string{"Allow": ""},
 		},
 	})
+}
+
+func TestUptime(t *testing.T) {
+	start := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	at := func(d time.Duration) func() time.Time {
+		return func() time.Time { return start.Add(d) }
+	}
+	jsonCT := map[string]string{"Content-Type": "application/json"}
+	notAllowed := map[string]string{"Allow": "GET", "Content-Type": "application/json"}
+	const notAllowedBody = "{\"error\":\"method not allowed\"}\n"
+
+	t.Run("after 90.7s", func(t *testing.T) {
+		runCases(t, Uptime(start, at(90700*time.Millisecond)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":90}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+			{
+				name:        "POST",
+				method:      http.MethodPost,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "PUT",
+				method:      http.MethodPut,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "DELETE",
+				method:      http.MethodDelete,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "HEAD",
+				method:      http.MethodHead,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+		})
+	})
+
+	t.Run("at start", func(t *testing.T) {
+		runCases(t, Uptime(start, at(0)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":0}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+		})
+	})
+
+	t.Run("clock went backwards", func(t *testing.T) {
+		runCases(t, Uptime(start, at(-5*time.Second)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":0}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+		})
+	})
+}
+
+// TestMethodNotAllowedJSON pins the helper's contract: it returns true only
+// when it has written the 405, and leaves GET requests untouched.
+func TestMethodNotAllowedJSON(t *testing.T) {
+	t.Run("GET passes through", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/uptime", nil)
+		rec := httptest.NewRecorder()
+
+		if methodNotAllowedJSON(rec, req) {
+			t.Fatal("methodNotAllowedJSON(GET) = true, want false")
+		}
+		if rec.Body.Len() != 0 {
+			t.Errorf("body = %q, want empty", rec.Body.String())
+		}
+		for _, k := range []string{"Allow", "Content-Type"} {
+			if got := rec.Header().Get(k); got != "" {
+				t.Errorf("header %s = %q, want unset", k, got)
+			}
+		}
+	})
+
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodHead} {
+		t.Run(method+" is rejected", func(t *testing.T) {
+			req := httptest.NewRequest(method, "/uptime", nil)
+			rec := httptest.NewRecorder()
+
+			if !methodNotAllowedJSON(rec, req) {
+				t.Fatalf("methodNotAllowedJSON(%s) = false, want true", method)
+			}
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+			}
+			if got := rec.Header().Get("Allow"); got != "GET" {
+				t.Errorf("Allow header = %q, want %q", got, "GET")
+			}
+			if got := rec.Header().Get("Content-Type"); got != "application/json" {
+				t.Errorf("Content-Type = %q, want %q", got, "application/json")
+			}
+			if got, want := rec.Body.String(), "{\"error\":\"method not allowed\"}\n"; got != want {
+				t.Errorf("body = %q, want %q", got, want)
+			}
+		})
+	}
 }
 
 func TestAllowGet(t *testing.T) {
