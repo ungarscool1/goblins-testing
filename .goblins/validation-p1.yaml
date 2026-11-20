@@ -23,3 +23,8 @@ checks:
       - name: cache
         image: redis:7.4-alpine
         command: ["redis-server", "--save", "", "--appendonly", "no"]
+  # A test secret reaches only the check that names it, and is scrubbed from its output.
+  - name: secret-scrub
+    stage: integration
+    run: 'test -n "$DEMO_TOKEN" && echo "the check sees: $DEMO_TOKEN"'
+    secrets: [DEMO_TOKEN]
