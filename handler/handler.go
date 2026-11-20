@@ -3,7 +3,7 @@ package handler
 
 import "net/http"
 
-// Hello responds to GET / with "hello world". Other paths return 404 and
+// Hello responds to GET / with "hello from goblins-testing". Other paths return 404 and
 // other methods return 405.
 func Hello(w http.ResponseWriter, r *http.Request) {
 	// Hello is registered on the catch-all "/" pattern, so it receives every
@@ -18,7 +18,7 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte("hello world"))
+	w.Write([]byte("hello from goblins-testing"))
 }
 
 // Health responds to GET with the JSON body {"status":"ok"}. Other methods

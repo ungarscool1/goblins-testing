@@ -90,7 +90,7 @@ func TestHello(t *testing.T) {
 			method:      http.MethodGet,
 			path:        "/",
 			wantStatus:  http.StatusOK,
-			wantBody:    "hello world",
+			wantBody:    "hello from goblins-testing",
 			checkBody:   true,
 			wantHeaders: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
 		},

@@ -15,7 +15,7 @@ func TestRoutes(t *testing.T) {
 		wantStatus int
 		wantBody   string // checked only when wantStatus is 200
 	}{
-		{name: "GET /", path: "/", wantStatus: http.StatusOK, wantBody: "hello world"},
+		{name: "GET /", path: "/", wantStatus: http.StatusOK, wantBody: "hello from goblins-testing"},
 		{name: "GET /health", path: "/health", wantStatus: http.StatusOK, wantBody: `{"status":"ok"}`},
 		{name: "GET /nope", path: "/nope", wantStatus: http.StatusNotFound},
 	}
