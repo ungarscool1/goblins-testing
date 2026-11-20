@@ -1,0 +1,25 @@
+# Checks for the P1 test installation. The personal installation keeps validation.yaml.
+version: 1
+image: golang:1.27-alpine
+checks:
+  - name: vet
+    stage: lint
+    run: go vet ./...
+  - name: test
+    stage: test
+    run: go test ./...
+  - name: conformance
+    stage: conformance
+    run: sh conformance/check.sh > conformance.txt 2>&1
+    artifacts: [conformance.txt]
+  # A test service next to a check, on a network only the two share.
+  - name: cache-reachable
+    stage: integration
+    run: >-
+      for i in 1 2 3 4 5 6 7 8 9 10; do
+      printf 'PING\r\n' | nc -w 2 cache 6379 | grep -q PONG && echo "cache answered" && exit 0;
+      sleep 1; done; echo "cache never answered"; exit 1
+    services:
+      - name: cache
+        image: redis:7.4-alpine
+        command: ["redis-server", "--save", "", "--appendonly", "no"]
