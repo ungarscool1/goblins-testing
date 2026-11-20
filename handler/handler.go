@@ -41,7 +41,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 // now(), rounded down and never negative. Other methods get a JSON 405.
 func Uptime(start time.Time, now func() time.Time) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !allowGetJSON(w, r) {
+		if methodNotAllowedJSON(w, r) {
 			return
 		}
 		seconds := int64(now().Sub(start) / time.Second)
@@ -56,19 +56,20 @@ func Uptime(start time.Time, now func() time.Time) http.HandlerFunc {
 	}
 }
 
-// allowGetJSON reports whether r is a GET request. If it is not, it writes a
-// 405 Method Not Allowed response with an "Allow: GET" header and the JSON
-// body {"error":"method not allowed"}, and returns false.
-func allowGetJSON(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(struct {
-			Error string `json:"error"`
-		}{"method not allowed"})
+// methodNotAllowedJSON writes a 405 Method Not Allowed response and returns
+// true if r is not a GET request. The response has an "Allow: GET" header,
+// Content-Type application/json and the body {"error":"method not allowed"}.
+// For GET it writes nothing and returns false.
+func methodNotAllowedJSON(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method == http.MethodGet {
 		return false
 	}
+	w.Header().Set("Allow", http.MethodGet)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	json.NewEncoder(w).Encode(struct {
+		Error string `json:"error"`
+	}{"method not allowed"})
 	return true
 }
 

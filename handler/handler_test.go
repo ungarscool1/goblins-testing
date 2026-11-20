@@ -214,6 +214,50 @@ func TestUptime(t *testing.T) {
 	})
 }
 
+// TestMethodNotAllowedJSON pins the helper's contract: it returns true only
+// when it has written the 405, and leaves GET requests untouched.
+func TestMethodNotAllowedJSON(t *testing.T) {
+	t.Run("GET passes through", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/uptime", nil)
+		rec := httptest.NewRecorder()
+
+		if methodNotAllowedJSON(rec, req) {
+			t.Fatal("methodNotAllowedJSON(GET) = true, want false")
+		}
+		if rec.Body.Len() != 0 {
+			t.Errorf("body = %q, want empty", rec.Body.String())
+		}
+		for _, k := range []string{"Allow", "Content-Type"} {
+			if got := rec.Header().Get(k); got != "" {
+				t.Errorf("header %s = %q, want unset", k, got)
+			}
+		}
+	})
+
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodHead} {
+		t.Run(method+" is rejected", func(t *testing.T) {
+			req := httptest.NewRequest(method, "/uptime", nil)
+			rec := httptest.NewRecorder()
+
+			if !methodNotAllowedJSON(rec, req) {
+				t.Fatalf("methodNotAllowedJSON(%s) = false, want true", method)
+			}
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+			}
+			if got := rec.Header().Get("Allow"); got != "GET" {
+				t.Errorf("Allow header = %q, want %q", got, "GET")
+			}
+			if got := rec.Header().Get("Content-Type"); got != "application/json" {
+				t.Errorf("Content-Type = %q, want %q", got, "application/json")
+			}
+			if got, want := rec.Body.String(), "{\"error\":\"method not allowed\"}\n"; got != want {
+				t.Errorf("body = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAllowGet(t *testing.T) {
 	t.Run("GET passes through", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
