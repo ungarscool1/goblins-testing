@@ -1,7 +1,11 @@
 // Package handler contains the HTTP handlers for the service.
 package handler
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+)
 
 // Hello responds to GET / with "hello world". Other paths return 404 and
 // other methods return 405.
@@ -30,6 +34,42 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// Uptime returns a handler that responds to GET with the JSON body
+// {"seconds":N}, where N is the number of whole seconds between start and
+// now(), rounded down and never negative. Other methods get a JSON 405.
+func Uptime(start time.Time, now func() time.Time) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !allowGetJSON(w, r) {
+			return
+		}
+		seconds := int64(now().Sub(start) / time.Second)
+		if seconds < 0 {
+			seconds = 0
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(struct {
+			Seconds int64 `json:"seconds"`
+		}{seconds})
+	}
+}
+
+// allowGetJSON reports whether r is a GET request. If it is not, it writes a
+// 405 Method Not Allowed response with an "Allow: GET" header and the JSON
+// body {"error":"method not allowed"}, and returns false.
+func allowGetJSON(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(struct {
+			Error string `json:"error"`
+		}{"method not allowed"})
+		return false
+	}
+	return true
 }
 
 // allowGet reports whether r is a GET request. If it is not, it writes a

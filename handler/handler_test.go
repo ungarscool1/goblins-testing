@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 type handlerCase struct {
@@ -122,6 +123,94 @@ func TestHello(t *testing.T) {
 			wantStatus:  http.StatusNotFound,
 			wantHeaders: map[string]string{"Allow": ""},
 		},
+	})
+}
+
+func TestUptime(t *testing.T) {
+	start := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	at := func(d time.Duration) func() time.Time {
+		return func() time.Time { return start.Add(d) }
+	}
+	jsonCT := map[string]string{"Content-Type": "application/json"}
+	notAllowed := map[string]string{"Allow": "GET", "Content-Type": "application/json"}
+	const notAllowedBody = "{\"error\":\"method not allowed\"}\n"
+
+	t.Run("after 90.7s", func(t *testing.T) {
+		runCases(t, Uptime(start, at(90700*time.Millisecond)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":90}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+			{
+				name:        "POST",
+				method:      http.MethodPost,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "PUT",
+				method:      http.MethodPut,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "DELETE",
+				method:      http.MethodDelete,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+			{
+				name:        "HEAD",
+				method:      http.MethodHead,
+				path:        "/uptime",
+				wantStatus:  http.StatusMethodNotAllowed,
+				wantBody:    notAllowedBody,
+				checkBody:   true,
+				wantHeaders: notAllowed,
+			},
+		})
+	})
+
+	t.Run("at start", func(t *testing.T) {
+		runCases(t, Uptime(start, at(0)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":0}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+		})
+	})
+
+	t.Run("clock went backwards", func(t *testing.T) {
+		runCases(t, Uptime(start, at(-5*time.Second)), []handlerCase{
+			{
+				name:        "GET",
+				method:      http.MethodGet,
+				path:        "/uptime",
+				wantStatus:  http.StatusOK,
+				wantBody:    "{\"seconds\":0}\n",
+				checkBody:   true,
+				wantHeaders: jsonCT,
+			},
+		})
 	})
 }
 
